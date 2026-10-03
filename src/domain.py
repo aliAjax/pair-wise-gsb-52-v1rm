@@ -28,6 +28,12 @@ class PermissionDenied(DomainError):
     code = "permission_denied"
 
 
+class ErasureInterrupted(DomainError):
+    """擦除批次中途失败：字段与检查点已一致回滚，等待续做，审计不声明成功。"""
+    status = 202
+    code = "erasure_interrupted"
+
+
 @dataclass(frozen=True)
 class Actor:
     user_id: str

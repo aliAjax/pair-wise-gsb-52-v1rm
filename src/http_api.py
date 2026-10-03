@@ -12,6 +12,9 @@ from .domain import Actor, DomainError, PermissionDenied, ValidationError
 RECORD_RE = re.compile(r"^/api/records/(\d+)$")
 ACTION_RE = re.compile(r"^/api/records/(\d+)/actions/([a-z_]+)$")
 AUDIT_RE = re.compile(r"^/api/records/(\d+)/audit$")
+EXPORT_RE = re.compile(r"^/api/records/(\d+)/export$")
+DISPUTE_RE = re.compile(r"^/api/records/(\d+)/dispute-resolution$")
+ERASURE_ITEM_RE = re.compile(r"^/api/erasure-requests/(\d+)/resume$")
 
 
 def make_handler(service: Any, static_dir: Path):
@@ -76,13 +79,21 @@ def make_handler(service: Any, static_dir: Path):
                     records = service.list_records(self._actor(), state=query.get("state", [None])[0], limit=int(query.get("limit", ["100"])[0]))
                     self._send(200, {"items": records})
                     return
-                match = RECORD_RE.match(parsed.path)
+                if parsed.path == "/api/erasure-requests":
+                    query = parse_qs(parsed.query)
+                    self._send(200, {"items": service.list_erasure(self._actor(), limit=int(query.get("limit", ["100"])[0]))})
+                    return
+                match = EXPORT_RE.match(parsed.path)
                 if match:
-                    self._send(200, service.get_record(self._actor(), int(match.group(1))))
+                    self._send(200, service.export_record(self._actor(), int(match.group(1))))
                     return
                 match = AUDIT_RE.match(parsed.path)
                 if match:
                     self._send(200, {"items": service.timeline(self._actor(), int(match.group(1)))})
+                    return
+                match = RECORD_RE.match(parsed.path)
+                if match:
+                    self._send(200, service.get_record(self._actor(), int(match.group(1))))
                     return
                 if parsed.path == "/api/stats":
                     self._send(200, service.stats(self._actor()))
@@ -98,6 +109,27 @@ def make_handler(service: Any, static_dir: Path):
                 if parsed.path == "/api/records":
                     record = service.create(self._actor(), body.get("reference", ""), body.get("data", {}))
                     self._send(201, record)
+                    return
+                if parsed.path == "/api/erasure-requests":
+                    record_id = body.get("record_id")
+                    if not isinstance(record_id, int):
+                        raise ValidationError("record_id必须是整数")
+                    summary = service.submit_erasure(self._actor(), record_id, body)
+                    self._send(200 if summary.get("duplicate") else 201, summary)
+                    return
+                match = ERASURE_ITEM_RE.match(parsed.path)
+                if match:
+                    summary = service.resume_erasure(self._actor(), int(match.group(1)))
+                    status = 202 if summary.get("status") == "failed" else 200
+                    self._send(status, summary)
+                    return
+                match = DISPUTE_RE.match(parsed.path)
+                if match:
+                    version = body.get("expected_version")
+                    if not isinstance(version, int):
+                        raise ValidationError("expected_version必须是整数")
+                    record = service.resolve_dispute(self._actor(), int(match.group(1)), version, body.get("data", {}))
+                    self._send(200, record)
                     return
                 match = ACTION_RE.match(parsed.path)
                 if match:

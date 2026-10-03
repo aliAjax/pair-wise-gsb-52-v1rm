@@ -9,14 +9,18 @@
     main { max-width: 960px; margin: auto; }
     button { padding: .55rem .9rem; cursor: pointer; }
     pre { background: #f4f6f8; padding: 1rem; overflow: auto; border-radius: 8px; }
-    .row { display: flex; gap: 1rem; align-items: center; }
+    .row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
   </style>
 </head>
 <body>
 <main>
   <h1>特殊教育支持计划合规</h1>
-  <p>最小演示页。完整业务流程通过README中的JSON接口调用。</p>
-  <div class="row"><button id="load">加载记录</button><button id="stats">查看状态统计</button></div>
+  <p>最小演示页。完整业务流程与清退处置链通过README中的JSON接口调用。</p>
+  <div class="row">
+    <button id="load">加载记录</button>
+    <button id="stats">查看状态统计</button>
+    <button id="requests">查看清退请求</button>
+  </div>
   <pre id="output">点击上方按钮读取服务状态。</pre>
 </main>
 <script>
@@ -28,6 +32,7 @@ async function show(path) {
 }
 document.getElementById("load").onclick = () => show("/api/records?limit=20");
 document.getElementById("stats").onclick = () => show("/api/stats");
+document.getElementById("requests").onclick = () => show("/api/erasure-requests?limit=20");
 </script>
 </body>
 </html>

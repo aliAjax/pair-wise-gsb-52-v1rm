@@ -1,7 +1,7 @@
 """特殊教育支持计划合规领域规则与状态转换。"""
 from typing import Any, Dict, Iterable, Tuple
 
-from .domain import Actor, Conflict, ValidationError, boolean, choice, integer, number, text, text_list
+from .domain import Actor, Conflict, ValidationError, boolean, choice, integer, number, optional_text, text, text_list
 
 
 INITIAL_STATE = "draft"
@@ -34,6 +34,9 @@ class DomainRules:
         integer(p, "review_due_days", 0)
         integer(p, "goals_count", 1)
         boolean(p, "consent")
+        p["guardian_name"] = optional_text(p, "guardian_name")
+        p["guardian_contact"] = optional_text(p, "guardian_contact")
+        p["dispute_open"] = boolean(p, "dispute_open", False)
         if p["delivered_minutes"] > p["service_minutes"]:
             raise ValidationError("已提供服务不能超过计划服务")
         return p
@@ -52,6 +55,8 @@ class DomainRules:
                 raise Conflict("该学生已有有效的支持计划")
 
     def require_transition(self, record: Dict[str, Any], action: str) -> str:
+        if record.get("disposition_state") == "erased" or record.get("state") == "anonymized":
+            raise Conflict("计划已完成清退匿名化，只保留匿名只读资料，不得变更")
         allowed = TRANSITIONS.get(action, {}).get(record["state"])
         if allowed is None:
             raise Conflict("当前状态不允许执行%s" % action)
