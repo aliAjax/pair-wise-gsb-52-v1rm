@@ -23,6 +23,16 @@ class Conflict(DomainError):
     code = "conflict"
 
 
+class FrozenPlan(Conflict):
+    status = 409
+    code = "frozen_plan"
+
+
+class ErasureBlocked(DomainError):
+    status = 422
+    code = "erasure_blocked"
+
+
 class PermissionDenied(DomainError):
     status = 403
     code = "permission_denied"
